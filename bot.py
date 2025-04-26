@@ -7,15 +7,7 @@ from pymongo import MongoClient
 # Your API credentials from https://my.telegram.org
   # <-- Replace with your API HASH (string)
 
-API_ID = 28863669  # <-- Replace with your API ID (integer)
-API_HASH = "72b4ff10bcce5ba17dba09f8aa526a44"  # <-- Replace with your API HASH (string)
 
-# Your Bot Token from BotFather
-
-
-
-# Replace with your token
-BOT_TOKEN = "7403077617:AAHpamE_hj-cuNb2kHECiMjD3oSddO_iR20"
 
 # Your API credentials from https://my.telegram.org
 API_ID = 28863669  # <-- Replace with your API ID (integer)
