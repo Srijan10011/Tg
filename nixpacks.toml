@@ -1,2 +1,12 @@
-[phases.setup]
-nixPkgs = ["openssl", "cacert"]
+[build]
+image = "python:3.9-slim"
+
+[[build.packages]]
+name = "python3"
+version = "3.9"
+
+[env]
+PYTHONUNBUFFERED = "1"
+
+[[build.commands]]
+command = "pip install -r requirements.txt"
