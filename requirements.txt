@@ -1,4 +1,2 @@
-python-telegram-bot
 telethon
-pymongo[srv]==3.12
-python
+python-telegram-bot==20.0
