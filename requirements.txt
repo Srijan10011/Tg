@@ -1,2 +1,5 @@
 telethon
 python-telegram-bot
+git add requirements.txt
+git commit -m "Add pyrogram and tgcrypto dependencies"
+git push origin main  # or the appropriate branch
