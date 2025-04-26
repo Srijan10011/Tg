@@ -3,12 +3,14 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 
+
+
 # Your API credentials from https://my.telegram.org
-API_ID = YOUR_API_ID  # <-- Replace with your API ID (integer)
-API_HASH = "YOUR_API_HASH"  # <-- Replace with your API HASH (string)
+API_ID = 28863669  # <-- Replace with your API ID (integer)
+API_HASH = "72b4ff10bcce5ba17dba09f8aa526a44"  # <-- Replace with your API HASH (string)
 
 # Your Bot Token from BotFather
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+BOT_TOKEN = "7403077617:AAHpamE_hj-cuNb2kHECiMjD3oSddO_iR20"
 
 # Temporary state storage
 user_states = {}
